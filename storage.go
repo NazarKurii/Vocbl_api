@@ -30,6 +30,7 @@ func (s *LocalStorage) CardsUpToDate() {
 			track.ToLanguage.VerifyTestStatuses(track.Settings.DaylyTestTries)
 			track.Writing.VerifyTestStatuses(track.Settings.DaylyTestTries)
 			track.Listening.VerifyTestStatuses(track.Settings.DaylyTestTries)
+
 			for x, _ := range track.Storage {
 
 				card := &track.Storage[x]
@@ -66,6 +67,11 @@ func (s *LocalStorage) GetTrack(r *http.Request) (*Track, error) {
 	})
 
 	if index != -1 {
+
+		user.TracksKeys = append([]string{key}, slices.DeleteFunc(user.TracksKeys, func(keyToCheck string) bool {
+			return keyToCheck == key
+		})...)
+
 		return &user.Tracks[index], nil
 	}
 

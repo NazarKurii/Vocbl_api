@@ -53,17 +53,6 @@ type DeepLResponse struct {
 	} `json:"translations"`
 }
 
-var langs = map[string]string{
-	"French":    "",
-	"German":    "",
-	"English":   "EN",
-	"Italian":   "",
-	"Ukrainian": "UK",
-	"Spanish":   "",
-	"Polish":    "",
-	"Swedish":   "",
-}
-
 func GetNewCardData(fromLanguage, toLanguage, expretion string, requestAttemts int) (CardData, error) {
 	url := fmt.Sprintf("https://www.dictionaryapi.com/api/v3/references/learners/json/%s?key=%s", expretion, ExampleApiKey)
 
@@ -222,7 +211,12 @@ func filterVerbs(translations []Translation) []Translation {
 			}
 		}
 	}
+
+	if len(infinitives) == 0 {
+		return translations
+	}
 	return infinitives
+
 }
 
 type Pronunciation struct {
@@ -330,8 +324,8 @@ func correctExamples(examples []string) []string {
 }
 
 var languages = map[string]string{
-	"english":   "EN-GB",
-	"german":    "DE",
+	"English":   "EN",
+	"German":    "DE",
 	"Spanish":   "ES",
 	"French":    "FR",
 	"Italian":   "IT",
@@ -348,10 +342,10 @@ func getTransltion(expretion, context, fromLanguage, toLanguage string, tries in
 	data.Set("auth_key", TranslationApiKey)
 	data.Set("text", expretion)
 
-	// data.Set("source_lang", languages[fromLanguage])
-	// data.Set("target_lang", languages[toLanguage])
-	data.Set("source_lang", "En")
-	data.Set("target_lang", "Uk")
+	data.Set("source_lang", languages[toLanguage])
+	data.Set("target_lang", languages[fromLanguage])
+	// data.Set("source_lang", "En")
+	// data.Set("target_lang", "Uk")
 	data.Set("context", context)
 
 	resp, err := http.PostForm(apiURL, data)
@@ -374,13 +368,11 @@ func getTransltion(expretion, context, fromLanguage, toLanguage string, tries in
 		fmt.Println("Error decoding the response:", err)
 
 	}
-	fmt.Println(deepLResponse)
 
 	if len(deepLResponse.Translations) > 0 {
 
 		return deepLResponse.Translations[0].Text, nil
 	} else {
-
 		return deepLResponse.Translations[0].Text, NoTranslationFound
 	}
 

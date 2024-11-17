@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"net/http"
+	"slices"
 	"time"
 
 	"github.com/gorilla/mux"
@@ -146,33 +147,39 @@ func (t Track) GetTest(r *http.Request) ([]Card, error) {
 	var i int
 	var todaysDate = time.Now().Format("2006.01.02")
 	for _, card := range t.Storage {
-		switch name {
-		case "listening":
-			if card.Listening.ReapeatDate == todaysDate {
-				cards = append(cards, card)
-				i++
-			}
-		case "toLanguage":
-			if card.ToLanguage.ReapeatDate == todaysDate {
-				cards = append(cards, card)
-				i++
-			}
 
-		case "fromLanguage":
-			if card.FromLanguage.ReapeatDate == todaysDate {
-				cards = append(cards, card)
-				i++
-			}
+		if card.CreationDate == todaysDate && i < max {
+			cards = append(cards, card)
+			i++
+			continue
+		} else {
 
-		case "writing":
-			if card.Writing.ReapeatDate == todaysDate {
-				cards = append(cards, card)
-				i++
+			switch name {
+			case "listening":
+				if card.Listening.ReapeatDate == todaysDate {
+					cards = append(cards, card)
+
+				}
+			case "toLanguage":
+				if card.ToLanguage.ReapeatDate == todaysDate {
+					cards = append(cards, card)
+
+				}
+
+			case "fromLanguage":
+				if card.FromLanguage.ReapeatDate == todaysDate {
+					cards = append(cards, card)
+
+				}
+
+			case "writing":
+				if card.Writing.ReapeatDate == todaysDate {
+					cards = append(cards, card)
+
+				}
 			}
 		}
-		if i == max {
-			break
-		}
+
 	}
 
 	if i == 0 {
@@ -206,42 +213,24 @@ func (t Track) GetStudy() (StudyAnswer, error) {
 
 	var maxCards = t.Settings.getMaxStudyCards()
 	var cards = make([]Card, 0, maxCards)
-	var failedTestCards = make([]Card, 0, maxCards)
+
 	var todaysDate = time.Now().Format("2006.01.02")
-	var fakeAnswers = make([]Card, 0, maxCards*2)
 
 	for _, card := range t.Storage {
 
-		if verifyCard(card, todaysDate) {
-
-			var cardsLength, failedCardsLength = len(cards), len(failedTestCards)
-			if card.CreationDate != todaysDate && failedCardsLength < maxCards {
-				failedTestCards = append(failedTestCards)
-			} else if cardsLength < maxCards {
-				cards = append(cards, card)
-			} else {
-				fakeAnswers = append(fakeAnswers, card)
-			}
-
-			if cardsLength == maxCards && failedCardsLength == maxCards {
-				break
-			}
+		if card.CreationDate == todaysDate && len(cards) < maxCards {
+			cards = append(cards, card)
 		}
 
 	}
 
-	var result = []Card{}
-	if t.Settings.FailedTestCardsPriopity {
-		result = append(failedTestCards, cards...)
-	} else {
-		result = append(cards, failedTestCards...)
-	}
+	cards = append(cards, t.getFailedCardsToStudy()...)
 
-	if len(result) == 0 {
+	if len(cards) == 0 {
 		return StudyAnswer{}, fmt.Errorf("There are no cards to study")
 	}
 
-	return StudyAnswer{Cards: result, FakeAnswers: t.getFakeAnswers()}, nil
+	return StudyAnswer{Cards: cards, FakeAnswers: t.getFakeAnswers()}, nil
 }
 
 func (t Track) getFakeAnswers() []Card {
@@ -261,27 +250,65 @@ func (t Track) getFakeAnswers() []Card {
 		cards[i].TranslatedData = copiedTranslatedData
 
 		// Modify the copied card (not the original)
-		cards[i].Data += " Fake"
-		cards[i].TranslatedData[len(cards[i].TranslatedData)-1] += " Fake"
+
 	}
 
 	return cards
 }
 
-func verifyCard(card Card, todaysDate string) bool {
+func (t Track) getFailedCardsToStudy() []Card {
 
-	switch {
-	case card.FromLanguage.ReapeatDate == todaysDate:
-		return true
-	case card.ToLanguage.ReapeatDate == todaysDate:
-		return true
-	case card.Writing.ReapeatDate == todaysDate:
-		return true
-	case card.Listening.ReapeatDate == todaysDate:
-		return true
-	default:
-		return false
+	var cards = make([]Card, 0)
+
+	var testCards = t.getAllTestCArds()
+
+	for _, card := range t.Storage {
+		if slices.IndexFunc(testCards, func(c Card) bool {
+			return c.ID == card.ID
+		}) == -1 {
+			cards = append(cards, card)
+		}
+
 	}
+
+	return cards
+}
+
+func (t Track) getAllTestCArds() []Card {
+
+	var cards = make([]Card, 0)
+
+	var todaysDate = time.Now().Format("2006.01.02")
+	for _, card := range t.Storage {
+
+		if card.CreationDate == todaysDate {
+			cards = append(cards, card)
+
+		} else {
+
+			if card.Listening.ReapeatDate == todaysDate {
+				cards = append(cards, card)
+
+				if card.ToLanguage.ReapeatDate == todaysDate {
+					cards = append(cards, card)
+
+				}
+
+				if card.FromLanguage.ReapeatDate == todaysDate {
+					cards = append(cards, card)
+
+				}
+
+				if card.Writing.ReapeatDate == todaysDate {
+					cards = append(cards, card)
+
+				}
+			}
+		}
+
+	}
+
+	return cards
 }
 
 func (t *Track) defineTest(r *http.Request) (*Test, error) {
@@ -369,41 +396,41 @@ func (t *Track) MissingTests() {
 	var listening int
 	var writing int
 	for _, card := range t.Storage {
-		if card.FromLanguage.ReapeatDate == todaysDate {
+		if card.FromLanguage.ReapeatDate == todaysDate && t.FromLanguage.Status != "failed" && t.FromLanguage.Status != "passed" {
 			fromLg++
 		}
-		if card.ToLanguage.ReapeatDate == todaysDate {
+		if card.ToLanguage.ReapeatDate == todaysDate && t.ToLanguage.Status != "failed" && t.ToLanguage.Status != "passed" {
 			toLg++
 		}
-		if card.Listening.ReapeatDate == todaysDate {
+		if card.Listening.ReapeatDate == todaysDate && t.Listening.Status != "failed" && t.Listening.Status != "passed" {
 			listening++
 		}
-		if card.Writing.ReapeatDate == todaysDate {
+		if card.Writing.ReapeatDate == todaysDate && t.Writing.Status != "failed" && t.Writing.Status != "passed" {
 			writing++
 		}
 	}
 
 	if fromLg >= t.Settings.DaylyTestCards {
 		t.FromLanguage.Status = "prepared"
-	} else {
+	} else if t.FromLanguage.Status != "failed" && t.FromLanguage.Status != "passed" {
 		t.FromLanguage.Status = "missing"
 	}
 
 	if toLg >= t.Settings.DaylyTestCards {
 		t.ToLanguage.Status = "prepared"
-	} else {
+	} else if t.ToLanguage.Status != "failed" && t.ToLanguage.Status != "passed" {
 		t.ToLanguage.Status = "missing"
 	}
 
 	if listening >= t.Settings.DaylyTestCards {
 		t.Listening.Status = "prepared"
-	} else {
+	} else if t.Listening.Status != "failed" && t.Listening.Status != "passed" {
 		t.Listening.Status = "missing"
 	}
 
 	if writing >= t.Settings.DaylyTestCards {
 		t.Writing.Status = "prepared"
-	} else {
+	} else if t.Writing.Status != "failed" && t.Writing.Status != "passed" {
 		t.Writing.Status = "missing"
 	}
 }
@@ -429,6 +456,7 @@ type Test struct {
 	LastFailDate   string `json:"lastFailDate"`
 	LastPassedDate string `json:"lastPassedDate"`
 	Status         string `json:"status"`
+	FailedCards    []Card
 }
 
 func (test *Test) VerifyTestStatuses(maxTestTries int) {
@@ -449,6 +477,7 @@ func (test *Test) VerifyTestStatuses(maxTestTries int) {
 		if date.Before(todaysDate) {
 			test.DaylyTestTries = maxTestTries
 			test.Status = "missing"
+			test.FailedCards = []Card{}
 		}
 	}
 
@@ -458,7 +487,7 @@ func (t Test) Copy() Test {
 	return t
 }
 
-func (t *Test) DefineStatusUpdate(req *CreateTestStatusRequest, maxTestTries int) error {
+func (t *Test) DefineStatusUpdate(req *CreateTestStatusRequest, maxTestTries int, cards []Card) error {
 	var todaysDate = time.Now().Format("2006.01.02")
 	if req.Passed {
 
@@ -473,6 +502,8 @@ func (t *Test) DefineStatusUpdate(req *CreateTestStatusRequest, maxTestTries int
 		if t.DaylyTestTries == 0 {
 			t.LastFailDate = todaysDate
 			t.Status = "failed"
+			t.FailedCards = cards
+
 		} else {
 			t.Status = "tried"
 		}

@@ -1,4 +1,4 @@
-module vocbl
+module github.com/NazarKurii/Vocbl_api
 
 go 1.22.5
 

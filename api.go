@@ -491,7 +491,7 @@ func (s *APIServer) handleGetNewCardData(w http.ResponseWriter, r *http.Request)
 
 func getFromLanguage(r *http.Request) (string, error) {
 
-	fromLanguage := mux.Vars(r)["toLanguage"]
+	fromLanguage := mux.Vars(r)["fromLanguage"]
 
 	return fromLanguage, nil
 }
@@ -639,7 +639,9 @@ func (s *APIServer) handlePostTest(w http.ResponseWriter, r *http.Request) error
 		return err
 	}
 
-	err = test.DefineStatusUpdate(statusRequest, track.Settings.DaylyTestTries)
+	var cards = track.getCardsByIDs(statusRequest.IDs)
+	err = test.DefineStatusUpdate(statusRequest, track.Settings.DaylyTestTries, cards)
+
 	if err != nil {
 		return err
 	}
@@ -648,6 +650,7 @@ func (s *APIServer) handlePostTest(w http.ResponseWriter, r *http.Request) error
 	if err != nil {
 		return err
 	}
+
 	s.dataBase.UpdateData()
 	store, _ := OpenStorage("./storage.json")
 	s.dataBase = store
@@ -673,9 +676,22 @@ func (t *Track) updateTestDates(testName string, IDs []int, testStatus string) e
 				test.Repeated = 0
 				test.defineRepeatDate()
 			}
+
 		}
 	}
 	return nil
+}
+
+func (t *Track) getCardsByIDs(IDs []int) []Card {
+
+	var cards []Card
+	for i, _ := range t.Storage {
+		card := t.Storage[i]
+		if slices.Contains(IDs, card.ID) {
+			cards = append(cards, card)
+		}
+	}
+	return cards
 }
 
 func (t *TestData) defineRepeatDate() {

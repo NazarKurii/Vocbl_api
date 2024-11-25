@@ -8,7 +8,6 @@ import (
 	"os"
 	"slices"
 	"strconv"
-	"time"
 
 	"github.com/gorilla/mux"
 )
@@ -23,7 +22,7 @@ func (s *LocalStorage) CardsUpToDate() {
 	for j, _ := range s.Storage {
 
 		user := &s.Storage[j]
-		todaysDate := time.Now().Format("2006.01.02")
+		// todaysDate := time.Now().Format("2006.01.02")
 		for i, _ := range user.Tracks {
 			track := &user.Tracks[i]
 			track.FromLanguage.VerifyTestStatuses(track.Settings.DaylyTestTries)
@@ -39,7 +38,7 @@ func (s *LocalStorage) CardsUpToDate() {
 				card.FromLanguage.VerifyDates()
 				card.Writing.VerifyDates()
 				card.Listening.VerifyDates()
-				card.CreationDate = todaysDate
+
 			}
 
 			track.MissingTests()

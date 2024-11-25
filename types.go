@@ -147,8 +147,10 @@ func (t Track) GetTest(r *http.Request) ([]Card, error) {
 	var i int
 	var todaysDate = time.Now().Format("2006.01.02")
 	for _, card := range t.Storage {
-
-		if card.CreationDate == todaysDate && i < max {
+		if i >= max {
+			break
+		}
+		if card.CreationDate == todaysDate {
 			cards = append(cards, card)
 			i++
 			continue
@@ -158,24 +160,24 @@ func (t Track) GetTest(r *http.Request) ([]Card, error) {
 			case "listening":
 				if card.Listening.ReapeatDate == todaysDate {
 					cards = append(cards, card)
-
+					i++
 				}
 			case "toLanguage":
 				if card.ToLanguage.ReapeatDate == todaysDate {
 					cards = append(cards, card)
-
+					i++
 				}
 
 			case "fromLanguage":
 				if card.FromLanguage.ReapeatDate == todaysDate {
 					cards = append(cards, card)
-
+					i++
 				}
 
 			case "writing":
 				if card.Writing.ReapeatDate == todaysDate {
 					cards = append(cards, card)
-
+					i++
 				}
 			}
 		}

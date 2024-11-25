@@ -10,8 +10,9 @@ import (
 )
 
 type User struct {
-	ID             int      `json:"id"`
-	FirstName      string   `json:"firstName"`
+	ID        int    `json:"id"`
+	FirstName string `json:"firstName"`
+
 	Token          string   `json:"token"`
 	CokiesAccepted bool     `json:"cokiesAccepted"`
 	LastName       string   `json:"lastName"`
